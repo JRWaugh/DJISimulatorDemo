@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/DJISimulatorDemo.iml" filepath="$PROJECT_DIR$/.idea/DJISimulatorDemo.iml" group="DJISimulatorDemo" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/app.iml" group="DJISimulatorDemo/app" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/openCVLibrary3410/openCVLibrary3410.iml" filepath="$PROJECT_DIR$/.idea/modules/openCVLibrary3410/openCVLibrary3410.iml" group="DJISimulatorDemo/openCVLibrary3410" />
+    </modules>
+  </component>
+</project>

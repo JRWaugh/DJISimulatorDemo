@@ -2,44 +2,42 @@ package com.dji.djisimulatordemo;
 
 import android.Manifest;
 import android.app.Activity;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
-
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
+
 import java.util.ArrayList;
 import java.util.List;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+import dji.common.error.DJIError;
 import dji.common.error.DJISDKError;
+import dji.common.product.Model;
 import dji.log.DJILog;
 import dji.sdk.base.BaseComponent;
 import dji.sdk.base.BaseProduct;
 import dji.sdk.products.Aircraft;
-import dji.common.error.DJIError;
 import dji.sdk.sdkmanager.DJISDKInitEvent;
 import dji.sdk.sdkmanager.DJISDKManager;
 
+
 public class MainActivity extends Activity {
     private static final String TAG = MainActivity.class.getName();
-
-    private TextView mTextConnectionStatus;
-    private TextView mTextProduct;
-    private Button mBtnOpen;
-    private static final String[] REQUIRED_PERMISSION_LIST = new String[] {
+    private static final String[] REQUIRED_PERMISSION_LIST = new String[]{
             Manifest.permission.VIBRATE,
             Manifest.permission.INTERNET,
             Manifest.permission.ACCESS_WIFI_STATE,
@@ -54,166 +52,137 @@ public class MainActivity extends Activity {
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.READ_PHONE_STATE,
     };
-    private final List<String> missingPermission = new ArrayList<>();
-    private final AtomicBoolean isRegistrationInProgress = new AtomicBoolean(false);
     private static final int REQUEST_PERMISSION_CODE = 12345;
-    protected final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+    private final List<String> missingPermission = new ArrayList<>();
+    private final BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
-        public void onReceive(Context context, Intent intent) {
-            refreshSDKRelativeUI();
+        public void onManagerConnected(int status) {
+            if (status == LoaderCallbackInterface.SUCCESS) {
+                Log.i(TAG, "OpenCV loaded successfully");
+            } else {
+                super.onManagerConnected(status);
+            }
         }
     };
+    private TextView mTextConnectionStatus;
+    private TextView mTextProduct;
+    private Button mBtnOpen;
+    private Handler mHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        checkAndRequestPermissions();
+
+        mHandler = new Handler(getMainLooper());
         setContentView(R.layout.activity_main);
-
-        mTextConnectionStatus = (TextView) findViewById(R.id.text_connection_status);
-        mTextProduct = (TextView) findViewById(R.id.text_product_info);
-        mBtnOpen = (Button) findViewById(R.id.btn_open);
-        mBtnOpen.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, CameraActivity.class);
-            startActivity(intent);
-        });
+        mTextConnectionStatus = findViewById(R.id.text_connection_status);
+        mTextProduct = findViewById(R.id.text_product_info);
+        mBtnOpen = findViewById(R.id.btn_open);
+        mBtnOpen.setOnClickListener(v -> startActivity(new Intent(this, CameraActivity.class)));
         mBtnOpen.setEnabled(false);
-        TextView mVersionTv = (TextView) findViewById(R.id.textView2);
-        mVersionTv.setText(getResources().getString(R.string.sdk_version, DJISDKManager.getInstance().getSDKVersion()));
-
-        // Register the broadcast receiver for receiving the device connection's changes.
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(DJISimulatorApplication.FLAG_CONNECTION_CHANGE);
-        registerReceiver(mReceiver, filter);
+        ((TextView) findViewById(R.id.textView2)).setText(getResources().getString(R.string.sdk_version, DJISDKManager.getInstance().getSDKVersion()));
     }
 
     @Override
     public void onResume() {
         Log.e(TAG, "onResume");
         super.onResume();
-    }
 
-    @Override
-    public void onPause() {
-        Log.e(TAG, "onPause");
-        super.onPause();
-    }
+        checkAndRequestPermissions();
 
-    @Override
-    public void onStop() {
-        Log.e(TAG, "onStop");
-        super.onStop();
-    }
-
-    @Override
-    protected void onDestroy() {
-        Log.e(TAG, "onDestroy");
-        unregisterReceiver(mReceiver);
-        super.onDestroy();
-    }
-
-    private void refreshSDKRelativeUI() {
-        BaseProduct mProduct = DJISimulatorApplication.getProductInstance();
-        if (null != mProduct && mProduct.isConnected()) {
-            Log.v(TAG, "refreshSDK: True");
-            mBtnOpen.setEnabled(true);
-
-            String str = mProduct instanceof Aircraft ? "DJIAircraft" : "DJIHandHeld";
-            mTextConnectionStatus.setText("Status: " + str + " connected");
-
-            if (null != mProduct.getModel())
-                mTextProduct.setText("" + mProduct.getModel().getDisplayName());
-            else
-                mTextProduct.setText(R.string.product_information);
+        if (!OpenCVLoader.initDebug()) {
+            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_4_0, this, mLoaderCallback);
         } else {
-            Log.v(TAG, "refreshSDK: False");
-            mBtnOpen.setEnabled(false);
-            mTextProduct.setText(R.string.product_information);
-            mTextConnectionStatus.setText(R.string.connection_loose);
+            Log.d(TAG, "OpenCV library found inside package. Using it!");
+            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
     }
 
-
-    /**
-     * Checks if there is any missing permissions, and
-     * requests runtime permission if needed.
-     */
     private void checkAndRequestPermissions() {
-        // Check for permissions
-        for (String eachPermission : REQUIRED_PERMISSION_LIST)
-            if (ContextCompat.checkSelfPermission(this, eachPermission) != PackageManager.PERMISSION_GRANTED)
-                missingPermission.add(eachPermission);
+        for (final String permission : REQUIRED_PERMISSION_LIST)
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED)
+                missingPermission.add(permission);
 
-        // Request for missing permissions
-        if (!missingPermission.isEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+        if (missingPermission.isEmpty()) {
+            startSDKRegistration();
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
             ActivityCompat.requestPermissions(this, missingPermission.toArray(new String[0]), REQUEST_PERMISSION_CODE);
     }
 
-    /**
-     * Result of runtime permission request
-     */
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
         // Check for granted permission and remove from missing list
         if (requestCode == REQUEST_PERMISSION_CODE)
             for (int i = grantResults.length - 1; i >= 0; i--)
                 if (grantResults[i] == PackageManager.PERMISSION_GRANTED)
                     missingPermission.remove(permissions[i]);
 
-        // If there is enough permission, we will start the registration
+        // If permissions are given, start registration
         if (missingPermission.isEmpty())
             startSDKRegistration();
         else
             showToast("Missing permissions!!!");
     }
 
-    private void startSDKRegistration() {
-        if (isRegistrationInProgress.compareAndSet(false, true)) {
-            AsyncTask.execute(() -> {
-                showToast( "registering, pls wait...");
-                DJISDKManager.getInstance().registerApp(getApplicationContext(), new DJISDKManager.SDKManagerCallback() {
-                    @Override
-                    public void onRegister(DJIError djiError) {
-                        if (djiError == DJISDKError.REGISTRATION_SUCCESS) {
-                            DJILog.e("App registration", DJISDKError.REGISTRATION_SUCCESS.getDescription());
-                            DJISDKManager.getInstance().startConnectionToProduct();
-                            showToast("Register Success");
-                        } else {
-                            showToast( "Register sdk fails, check network is available");
-                        }
-                        Log.v(TAG, djiError.getDescription());
-                    }
+    public void startSDKRegistration() {
+        showToast("Registering, please wait...");
+        AsyncTask.execute(() -> DJISDKManager.getInstance().registerApp(getApplicationContext(), new DJISDKManager.SDKManagerCallback() {
+            @Override
+            public void onRegister(DJIError djiError) {
+                Log.d(TAG, djiError.getDescription());
+                if (djiError == DJISDKError.REGISTRATION_SUCCESS) {
+                    showToast("Register Success");
+                    DJISDKManager.getInstance().startConnectionToProduct();
+                } else {
+                    showToast("Register Fail. Check network is available.");
+                }
+            }
 
-                    @Override
-                    public void onProductDisconnect() {
-                        Log.d(TAG, "onProductDisconnect");
-                        showToast("Product Disconnected");
-                    }
+            @Override
+            public void onProductDisconnect() {
+                Log.d(TAG, "onProductDisconnect");
+                showToast("Product Disconnected");
 
-                    @Override
-                    public void onProductConnect(BaseProduct baseProduct) {
-                        Log.d(TAG, String.format("onProductConnect newProduct:%s", baseProduct));
-                        showToast("Product Connected");
-                    }
-
-                    @Override
-                    public void onComponentChange(BaseProduct.ComponentKey componentKey, BaseComponent oldComponent, BaseComponent newComponent) {
-                        if (newComponent != null)
-                            newComponent.setComponentListener(isConnected -> Log.d(TAG, "onComponentConnectivityChanged: " + isConnected));
-
-                        Log.d(TAG, String.format("onComponentChange key:%s, oldComponent:%s, newComponent:%s", componentKey, oldComponent, newComponent));
-                    }
-
-                    @Override
-                    public void onInitProcess(DJISDKInitEvent djisdkInitEvent, int i) { }
-
-                    @Override
-                    public void onDatabaseDownloadProgress(long l, long l1) { }
+                mHandler.post(() -> {
+                    mTextProduct.setText(R.string.product_information);
+                    mTextConnectionStatus.setText(R.string.connection_loose);
+                    mBtnOpen.setEnabled(false);
                 });
-            });
-        }
+            }
+
+            @Override
+            public void onProductConnect(BaseProduct baseProduct) {
+                Log.d(TAG, String.format("onProductConnect newProduct:%s", baseProduct));
+                showToast("Product Connected");
+
+                mHandler.post(() -> {
+                    mTextProduct.setText(baseProduct.getModel() != null ? baseProduct.getModel().getDisplayName() : getString(R.string.product_information));
+                    mTextConnectionStatus.setText(String.format("Status: %s connected", baseProduct.isConnected() ? "DJIAircraft" : "DJIHandHeld"));
+                    if (baseProduct.isConnected())
+                        mBtnOpen.setEnabled(true);
+                });
+            }
+
+            @Override
+            public void onComponentChange(BaseProduct.ComponentKey componentKey, BaseComponent oldComponent, BaseComponent newComponent) {
+                Log.d(TAG, String.format("onComponentChange key:%s, oldComponent:%s, newComponent:%s", componentKey, oldComponent, newComponent));
+
+                if (newComponent != null) {
+                    newComponent.setComponentListener(isConnected -> Log.d(TAG, "onComponentConnectivityChanged: " + isConnected));
+                    DJISDKManager.getInstance().startConnectionToProduct();
+                }
+            }
+
+            @Override
+            public void onInitProcess(DJISDKInitEvent djisdkInitEvent, int i) {
+            }
+
+            @Override
+            public void onDatabaseDownloadProgress(long l, long l1) {
+            }
+        }));
     }
 
     public void showToast(final String msg) {

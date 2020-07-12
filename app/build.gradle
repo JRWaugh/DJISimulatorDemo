@@ -7,10 +7,10 @@ repositories {
 android {
     compileSdkVersion 29
     buildToolsVersion '29.0.3'
-    useLibrary 'org.apache.http.legacy'
+    //useLibrary 'org.apache.http.legacy'
 
     defaultConfig {
-        minSdkVersion 24
+        minSdkVersion 19
         targetSdkVersion 29
         multiDexEnabled true
         ndk {
@@ -76,6 +76,7 @@ dependencies {
         exclude module: 'library-anti-distortion'
         exclude module: 'fly-safe-database'
     })
+    implementation project(path: ':openCVLibrary3410')
     compileOnly 'com.dji:dji-sdk-provided:4.12'
 
     implementation 'androidx.appcompat:appcompat:1.1.0'
