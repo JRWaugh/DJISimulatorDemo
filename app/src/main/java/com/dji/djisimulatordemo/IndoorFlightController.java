@@ -4,74 +4,45 @@ import java.util.ArrayList;
 
 import dji.common.flightcontroller.ObstacleDetectionSector;
 import dji.common.flightcontroller.ObstacleDetectionSectorWarning;
+import dji.common.flightcontroller.virtualstick.FlightControlData;
+import dji.sdk.flightcontroller.Compass;
+
+import static java.lang.Math.round;
 
 public class IndoorFlightController {
-    enum State {Lost, ApproachingWall, WallFollow}
+    /*
+    private static SectorState obstructionState(final ObstacleDetectionSector[] detectionSectors) {
+        int equalSectors = 0;
+        boolean obstructed = false;
+        int obstructionWeight = 0;
 
-    ;
-    final static float MIN_SAFE_DISTANCE = 1.2f;
-    final static float MAX_DISTANCE = 100.0f;
-    private State state = State.Lost;
-    boolean isFlying;
-    private ArrayList<Wall> walls = new ArrayList<>(2);
+        for (int i = 0; i < detectionSectors.length; ++i) {
+            if (detectionSectors[i].getWarningLevel() == ObstacleDetectionSectorWarning.INVALID)
+                return SectorState.Invalid;
 
-    private static final String TAG = IndoorFlightController.class.getName();
+            if (detectionSectors[i].getObstacleDistanceInMeters() == DetectionEvent.IDEAL_DISTANCE) {
+                obstructed = true;
 
-    public IndoorFlightController() {
+                if (i <= 1)
+                    --obstructionWeight;
+                else
+                    ++obstructionWeight;
 
-    }
-
-    public void updateWalls(final ObstacleDetectionSector[] detectionSectors) {
-        // Call this when sectors updated and when going into ATTI mode
-        switch (state) {
-            case Lost:
-                if (!sectorsValid(detectionSectors))
-                    state = State.Lost; // No change
-                    if (sectorsEqual(detectionSectors)) {
-                        // If searching -> w
-                    }
-                    if (walls.isEmpty()) {
-                        {
-                            // walls.add(new Wall());
-                            if ()
-                        }
-                    } else {
-
-                    }
-                } else {
-                    // Sectors not valid.
-                }
-                if (walls.isEmpty()) {
-                    // SET STATE TO SEARCHING
-                    if (detectionSectors[0].getObstacleDistanceInMeters() == MAX_DISTANCE) {
-                        // ROTATE RIGHT
-                    } else if (detectionSectors[3].getObstacleDistanceInMeters() == MAX_DISTANCE) {
-                        // ROTATE LEFT
-                    } else
-                }
-
+                if (detectionSectors[0].getObstacleDistanceInMeters() == detectionSectors[i].getObstacleDistanceInMeters())
+                    ++equalSectors;
+            }
         }
+
+        if (equalSectors == 4)
+            return SectorState.EquallyObstructed;
+        else if (!obstructed)
+            return SectorState.Unobstructed;
+        else if (obstructionWeight <= 0) {
+            return SectorState.LeftSideObstructed;
+        } else
+            return SectorState.RightSideObstructed;
     }
 
-    private static boolean sectorsEqual(final ObstacleDetectionSector[] detectionSectors) {
-        for (int i = 1; i < detectionSectors.length; ++i)
-            if (detectionSectors[0].getObstacleDistanceInMeters() != detectionSectors[i].getObstacleDistanceInMeters())
-                return false;
-        return true;
-    }
-
-    private static boolean sectorDistancesIdeal(final ObstacleDetectionSector[] detectionSectors) {
-        for (final ObstacleDetectionSector detectionSector : detectionSectors)
-            if (detectionSector.getObstacleDistanceInMeters() < 1.5f || detectionSector.getObstacleDistanceInMeters() > 2.25f)
-                return false;
-        return true;
-    }
-
-    private static boolean sectorsValid(final ObstacleDetectionSector[] detectionSectors) {
-        for (final ObstacleDetectionSector detectionSector : detectionSectors)
-            if (detectionSector.getWarningLevel() == ObstacleDetectionSectorWarning.INVALID)
-                return false;
-        return true;
-    }
+     */
 }
 

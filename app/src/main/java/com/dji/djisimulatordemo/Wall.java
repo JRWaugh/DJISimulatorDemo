@@ -1,6 +1,13 @@
 package com.dji.djisimulatordemo;
 
+import android.graphics.Point;
+import android.graphics.PointF;
+
 import dji.common.flightcontroller.ObstacleDetectionSector;
+import dji.common.model.LocationCoordinate2D;
+
+import static dji.common.flightcontroller.virtualstick.Limits.YAW_CONTROL_MAX_ANGLE;
+import static dji.common.flightcontroller.virtualstick.Limits.YAW_CONTROL_MIN_ANGLE;
 
 public class Wall {
     private enum State {
@@ -8,53 +15,57 @@ public class Wall {
         Fraudulent
     }
 
-    public Wall(final ObstacleDetectionSector[] detectionSectors) {
-        /*
-        mDistancesInMeters = new float[detectionSectors.length];
-        for (int i = 0; i < mDistancesInMeters.length; ++i) {
-            mDistancesInMeters[i] = detectionSectors[i].getObstacleDistanceInMeters();
-            if (mDistancesInMeters[0] != mDistancesInMeters[i]);
+    public Wall(final PointF originPoint, final float heading) {
+        mOriginPoint = originPoint;
+        mHeading = heading;
+        mPreferredHeading = 0;
 
-        }
+        mPortHeading = mHeading - 90.0f;
+        if (mPortHeading < YAW_CONTROL_MIN_ANGLE)
+            mPortHeading = YAW_CONTROL_MAX_ANGLE + (mPortHeading - YAW_CONTROL_MIN_ANGLE);
 
-         */
-    }
-
-    public Wall(final float[] distancesInMeters) {
-
-    }
-    private State state;
-
-    public void updateState(final ObstacleDetectionSector[] detectionSectors) {
+        mStarboardHeading = mHeading + 90.0f;
+        if (mStarboardHeading > YAW_CONTROL_MAX_ANGLE)
+            mStarboardHeading = YAW_CONTROL_MIN_ANGLE + (mStarboardHeading - YAW_CONTROL_MAX_ANGLE);
 
     }
 
-    /*
-    public boolean sectorsAllEqual() {
-        for (int i = 1; i < mDetectionSectors.length; ++i)
-            if (mDetectionSectors[0] != mDetectionSectors[i])
-                return false;
-        return true;
+    public float getHeading() {
+        return mHeading;
     }
 
-    public boolean sectorsReliable() {
-        float minObstacleDistance = 0.0f;
-        float maxObstacleDistance = 0.0f;
-
-        for (final ObstacleDetectionSector detectionSector : mDetectionSectors) {
-            minObstacleDistance = minObstacleDistance == 0 ? detectionSector.getObstacleDistanceInMeters() : Math.min(minObstacleDistance, detectionSector.getObstacleDistanceInMeters());
-            maxObstacleDistance = maxObstacleDistance == 0 ? detectionSector.getObstacleDistanceInMeters() : Math.max(maxObstacleDistance, detectionSector.getObstacleDistanceInMeters());
-        }
-
-        return !(maxObstacleDistance - minObstacleDistance > 50.0f);
+    public float getPortHeading() {
+        return mPortHeading;
     }
 
+    public float getStarboardHeading() {
+        return mStarboardHeading;
+    }
 
+    public void setTargetPoint(final PointF point) {
+        mTargetPoint = point;
+    }
 
-    private final float[] mDistancesInMeters;
+    public void setTargetPoint(final float displacement, final float direction) {
+        mTargetPoint = new PointF(mOriginPoint.x + (float) Math.cos(direction) * displacement, mOriginPoint.y + (float) Math.sin(direction) * displacement);
+    }
 
-     */
+    public void setPreferredHeading(final int preferredHeading) {
+        mPreferredHeading = preferredHeading;
+    }
 
+    public int getPreferredHeading() {
+        return mPreferredHeading;
+    }
 
+    public PointF getTargetPoint() {
+        return mTargetPoint;
+    }
+
+    private int mPreferredHeading;
+    private final float mHeading;
+    private float mPortHeading, mStarboardHeading;
+    private final PointF mOriginPoint;
+    private PointF mTargetPoint;
 }
 
