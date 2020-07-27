@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.dji.djisimulatordemo">
+    package="com.dji.videostreamdecodingsample">
     <!-- SDK permission requirement -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
@@ -28,17 +28,19 @@
         android:required="true" />
 
     <application
-        android:name=".MApplication"
+        android:name="com.dji.videostreamdecodingsample.MApplication"
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <meta-data android:name="com.dji.sdk.API_KEY" android:value="cc5807afbbfa2265692fe7b3" />
+        <meta-data android:name="com.dji.sdk.API_KEY" android:value="1cf15043dbd41377c6678be8" />
 
-        <service android:name="dji.sdk.sdkmanager.DJIGlobalService"></service>
+        <service android:name="dji.sdk.sdkmanager.DJIGlobalService" />
 
         <uses-library android:name="org.apache.http.legacy" android:required="false" />
+
+        <activity android:name="org.ros.android.MasterChooser" />
 
         <activity android:name="dji.sdk.sdkmanager.DJIAoaControllerActivity"
             android:theme="@android:style/Theme.Translucent">
@@ -52,7 +54,7 @@
                 />
         </activity>
 
-        <activity android:name=".MainActivity"
+        <activity android:name="com.dji.videostreamdecodingsample.MainActivity"
             android:configChanges="orientation"
             android:screenOrientation="portrait">
 
@@ -71,7 +73,7 @@
                 />
         </activity>
 
-        <activity android:name=".CameraActivity"
+        <activity android:name="com.dji.videostreamdecodingsample.CameraActivity"
             android:screenOrientation="landscape"
             />
 
