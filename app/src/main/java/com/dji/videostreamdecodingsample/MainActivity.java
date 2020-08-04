@@ -17,16 +17,11 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.dji.videostreamdecodingsample.media.DJIVideoStreamDecoder;
-
 import java.util.ArrayList;
 import java.util.List;
 
-import dji.common.camera.ResolutionAndFrameRate;
 import dji.common.error.DJIError;
 import dji.common.error.DJISDKError;
-import dji.common.useraccount.UserAccountState;
-import dji.common.util.CommonCallbacks;
 import dji.sdk.base.BaseComponent;
 import dji.sdk.base.BaseProduct;
 import dji.sdk.sdkmanager.DJISDKInitEvent;
@@ -35,7 +30,7 @@ import dji.sdk.sdkmanager.DJISDKManager;
 
 public class MainActivity extends Activity {
     private static final String TAG = MainActivity.class.getName();
-    private static final String[] REQUIRED_PERMISSION_LIST = new String[]{
+    private static final String[] REQUIRED_PERMISSION_LIST = new String[] {
             Manifest.permission.VIBRATE,
             Manifest.permission.INTERNET,
             Manifest.permission.ACCESS_WIFI_STATE,
@@ -84,9 +79,9 @@ public class MainActivity extends Activity {
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED)
                 missingPermission.add(permission);
 
-        if (missingPermission.isEmpty()) {
+        if (missingPermission.isEmpty())
             startSDKRegistration();
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
             ActivityCompat.requestPermissions(this, missingPermission.toArray(new String[0]), REQUEST_PERMISSION_CODE);
     }
 
@@ -127,7 +122,7 @@ public class MainActivity extends Activity {
 
                 mHandler.post(() -> {
                     mTextProduct.setText(R.string.product_information);
-                    mTextConnectionStatus.setText(R.string.connection_loose);
+                    mTextConnectionStatus.setText(R.string.connection_lost);
                     mBtnOpen.setEnabled(false);
                 });
             }
@@ -146,6 +141,11 @@ public class MainActivity extends Activity {
             }
 
             @Override
+            public void onProductChanged(BaseProduct baseProduct) {
+
+            }
+
+            @Override
             public void onComponentChange(BaseProduct.ComponentKey componentKey, BaseComponent oldComponent, BaseComponent newComponent) {
                 Log.d(TAG, String.format("onComponentChange key:%s, oldComponent:%s, newComponent:%s", componentKey, oldComponent, newComponent));
 
@@ -156,12 +156,10 @@ public class MainActivity extends Activity {
             }
 
             @Override
-            public void onInitProcess(DJISDKInitEvent djisdkInitEvent, int i) {
-            }
+            public void onInitProcess(DJISDKInitEvent djisdkInitEvent, int i) { }
 
             @Override
-            public void onDatabaseDownloadProgress(long l, long l1) {
-            }
+            public void onDatabaseDownloadProgress(long l, long l1) { }
         }));
     }
 

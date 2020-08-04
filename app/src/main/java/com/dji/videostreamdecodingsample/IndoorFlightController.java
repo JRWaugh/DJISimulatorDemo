@@ -1,7 +1,5 @@
 package com.dji.videostreamdecodingsample;
 
-import static java.lang.Math.round;
-
 public class IndoorFlightController {
     /*
     private static SectorState obstructionState(final ObstacleDetectionSector[] detectionSectors) {

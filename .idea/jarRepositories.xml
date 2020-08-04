@@ -51,5 +51,10 @@
       <option name="name" value="maven5" />
       <option name="url" value="http://repository.springsource.com/maven/bundles/external" />
     </remote-repository>
+    <remote-repository>
+      <option name="id" value="maven6" />
+      <option name="name" value="maven6" />
+      <option name="url" value="https://jitpack.io" />
+    </remote-repository>
   </component>
 </project>
