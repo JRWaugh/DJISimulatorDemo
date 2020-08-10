@@ -1,13 +1,13 @@
 <component name="libraryTable">
   <library name="Gradle: io.netty:netty:3.9.7.Final@jar">
     <CLASSES>
-      <root url="jar://$PROJECT_DIR$/../.gradle/caches/modules-2/files-2.1/io.netty/netty/3.9.7.Final/34784530ed2ba9d74e49df9db99cff849c3ca8ad/netty-3.9.7.Final.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.netty/netty/3.9.7.Final/34784530ed2ba9d74e49df9db99cff849c3ca8ad/netty-3.9.7.Final.jar!/" />
     </CLASSES>
     <JAVADOC>
-      <root url="jar://$PROJECT_DIR$/../.gradle/caches/modules-2/files-2.1/io.netty/netty/3.9.7.Final/28a9a4a20eb2febdfab30902e4edd20e09585100/netty-3.9.7.Final-javadoc.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.netty/netty/3.9.7.Final/28a9a4a20eb2febdfab30902e4edd20e09585100/netty-3.9.7.Final-javadoc.jar!/" />
     </JAVADOC>
     <SOURCES>
-      <root url="jar://$PROJECT_DIR$/../.gradle/caches/modules-2/files-2.1/io.netty/netty/3.9.7.Final/d961acc2cbf95f69ebaf92a2298e9a807b9d30d5/netty-3.9.7.Final-sources.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.netty/netty/3.9.7.Final/d961acc2cbf95f69ebaf92a2298e9a807b9d30d5/netty-3.9.7.Final-sources.jar!/" />
     </SOURCES>
   </library>
 </component>

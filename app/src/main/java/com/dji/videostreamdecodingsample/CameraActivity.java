@@ -1,14 +1,13 @@
 package com.dji.videostreamdecodingsample;
 
 import android.content.Intent;
-import android.graphics.ImageFormat;
-import android.graphics.YuvImage;
+import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
+import android.util.Pair;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -19,9 +18,11 @@ import androidx.annotation.NonNull;
 
 import com.dji.videostreamdecodingsample.media.DJIVideoStreamDecoder;
 import com.dji.videostreamdecodingsample.media.NativeHelper;
-import com.pedro.rtplibrary.rtmp.RtmpCamera1;
+import com.dji.videostreamdecodingsample.media.TestH264Stream;
+import com.dji.videostreamdecodingsample.media.VideoFeedView;
 
 import net.ossrs.rtmp.ConnectCheckerRtmp;
+import net.ossrs.rtmp.SrsFlvMuxer;
 
 import org.ros.android.RosActivity;
 import org.ros.namespace.GraphName;
@@ -35,9 +36,6 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
-
-
-import net.ossrs.rtmp.ConnectCheckerRtmp;
 
 import dji.common.error.DJIError;
 import dji.common.error.DJISDKError;
@@ -68,7 +66,7 @@ import static dji.common.flightcontroller.virtualstick.Limits.YAW_CONTROL_MIN_AN
 
 public class CameraActivity extends RosActivity implements NodeMain {
     private static final String TAG = CameraActivity.class.getName();
-    private static final String STREAM_URL = "rtmp://84.248.73.112:1935/hls/test";
+    private static final String STREAM_URL = "rtmp://192.168.10.38/hls/test";
     final static float LOWER_IDEAL_DISTANCE = 0.87f;
     final static float UPPER_IDEAL_DISTANCE = 1.22f;
     final static float WALL_LOST_DISTANCE = 2.2f;
@@ -126,7 +124,9 @@ public class CameraActivity extends RosActivity implements NodeMain {
     private Gimbal mGimbal;
     private FlightControlData mFlightControlData;
 
-    protected VideoFeeder.VideoDataListener mReceivedVideoDataListener;
+    private VideoFeeder.VideoDataListener mReceivedVideoDataListener;
+    private VideoFeeder.VideoFeed standardVideoFeeder;
+    private VideoFeedView primaryVideoFeedView;
     private Timer mSendVirtualStickDataTimer;
     private SendVirtualStickDataTask mSendVirtualStickDataTask;
 
@@ -137,8 +137,6 @@ public class CameraActivity extends RosActivity implements NodeMain {
     private HandlerThread handlerThread;
     private CompressedImagePublisher compressedImagePublisher;
     private SurfaceView mSurfaceView;
-    private RtmpCamera1 mRTMPCamera;
-
 
     /*  *  *  ACTIVITY METHOD OVERRIDES *  *  */
     @Override
@@ -150,27 +148,32 @@ public class CameraActivity extends RosActivity implements NodeMain {
         handlerThread = new HandlerThread("ImageHandler");
         handlerThread.start();
         initUI();
+
         mYUV = new byte[YUV_DATA_LENGTH];
         Arrays.fill(mYUV, (byte) 128); // We don't care about the chrominance (U and V), so we can set all that data to no-chrominance and only read Y data
-
         /*
         DJIVideoStreamDecoder.getInstance().init(this, null);
         DJIVideoStreamDecoder.getInstance().setYuvDataListener((MediaFormat format, final ByteBuffer yuvFrame, int dataSize, final int width, final int height) -> {
             if (yuvFrame != null) {
                 yuvFrame.get(mYUV, 0, width * height);
-                YuvImage yuv = new YuvImage(mYUV, ImageFormat.NV21, width, height, null);
+
+                /*YuvImage yuv = new YuvImage(mYUV, ImageFormat.NV21, width, height, null);
                 Handler handler = new Handler(handlerThread.getLooper());
                 handler.post(() -> {
                     if (compressedImagePublisher != null)
                         compressedImagePublisher.onNewImage(yuv);
                 });
+
+
             }
         });
+        */
 
-         */
 
-        mReceivedVideoDataListener = (bytes, i) -> DJIVideoStreamDecoder.getInstance().parse(bytes, i);
-        VideoFeeder.getInstance().getPrimaryVideoFeed().addVideoDataListener(mReceivedVideoDataListener);
+        mReceivedVideoDataListener = (videoBuffer, size) -> {
+            DJIVideoStreamDecoder.getInstance().parse(videoBuffer, size);
+        };
+
         mFlightControlData = new FlightControlData(0.0f, 0.0f, 0.0f, 0.0f);
     }
 
@@ -178,9 +181,6 @@ public class CameraActivity extends RosActivity implements NodeMain {
     public void onResume() {
         Log.e(TAG, "onResume");
         super.onResume();
-
-        DJIVideoStreamDecoder.getInstance().resume();
-        VideoFeeder.getInstance().getPrimaryVideoFeed().addVideoDataListener(mReceivedVideoDataListener);
 
         AsyncTask.execute(() -> DJISDKManager.getInstance().registerApp(this, new DJISDKManager.SDKManagerCallback() {
             @Override
@@ -201,6 +201,27 @@ public class CameraActivity extends RosActivity implements NodeMain {
                 setFlightAssistant(((Aircraft) baseProduct).getFlightController().getFlightAssistant());
                 setGimbal(baseProduct.getGimbal());
                 initVirtualStickData();
+
+                mSurfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
+                    @Override
+                    public void surfaceCreated(@NonNull SurfaceHolder surfaceHolder) {
+                        DJIVideoStreamDecoder.getInstance().init(getApplicationContext(), surfaceHolder.getSurface());
+                        DJIVideoStreamDecoder.getInstance().resume();
+                    }
+
+                    @Override
+                    public void surfaceChanged(@NonNull SurfaceHolder surfaceHolder, int i, int i1, int i2) {
+                        DJIVideoStreamDecoder.getInstance().changeSurface(surfaceHolder.getSurface());
+                    }
+
+                    @Override
+                    public void surfaceDestroyed(@NonNull SurfaceHolder surfaceHolder) {
+                        DJIVideoStreamDecoder.getInstance().stop();
+                    }
+                });
+
+
+                VideoFeeder.getInstance().getPrimaryVideoFeed().addVideoDataListener(mReceivedVideoDataListener);
             }
 
             @Override
@@ -235,6 +256,7 @@ public class CameraActivity extends RosActivity implements NodeMain {
     public void onPause() {
         Log.e(TAG, "onPause");
         super.onPause();
+
         VideoFeeder.getInstance().getPrimaryVideoFeed().removeVideoDataListener(mReceivedVideoDataListener);
         unInitVirtualStickData();
     }
@@ -244,7 +266,6 @@ public class CameraActivity extends RosActivity implements NodeMain {
         Log.e(TAG, "onDestroy");
         super.onDestroy();
 
-        DJIVideoStreamDecoder.getInstance().stop();
         unInitVirtualStickData();
         handlerThread.quit();
     }
@@ -300,72 +321,21 @@ public class CameraActivity extends RosActivity implements NodeMain {
                 mFlightController.startTakeoff(djiError -> showToast((djiError == null) ? "Take off Success" : djiError.getDescription())));
         findViewById(R.id.btn_land).setOnClickListener((View v) ->
                 mFlightController.startLanding(djiError -> showToast((djiError == null) ? "Start Landing" : djiError.getDescription())));
+
+        //primaryVideoFeedView = findViewById(R.id.vfw_primary);
+        //primaryVideoFeedView.registerVideoDataListener(mReceivedVideoDataListener);
         mSurfaceView = findViewById(R.id.video_previewer_surface);
-        mRTMPCamera = new RtmpCamera1(mSurfaceView, new ConnectCheckerRtmp() {
-            @Override
-            public void onConnectionSuccessRtmp() { }
-
-            @Override
-            public void onConnectionFailedRtmp(@NonNull String reason) {
-                runOnUiThread(() -> {
-                    if (mRTMPCamera.reTry(5000, reason)) {
-                        showToast("Retry");
-                    } else {
-                        showToast("Connection failed. " + reason);
-                        mRTMPCamera.stopStream();
-                    }
-                });
-
-            }
-
-            @Override
-            public void onNewBitrateRtmp(long bitrate) { }
-
-            @Override
-            public void onDisconnectRtmp() { }
-
-            @Override
-            public void onAuthErrorRtmp() { }
-
-            @Override
-            public void onAuthSuccessRtmp() { }
-        });
-        mRTMPCamera.setReTries(10);
-        mSurfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
-            @Override
-            public void surfaceCreated(@NonNull SurfaceHolder surfaceHolder) {
-                NativeHelper.getInstance().init();
-                DJIVideoStreamDecoder.getInstance().init(getApplicationContext(), surfaceHolder.getSurface());
-                DJIVideoStreamDecoder.getInstance().resume();
-                mRTMPCamera.startStream(STREAM_URL);
-            }
-
-            @Override
-            public void surfaceChanged(@NonNull SurfaceHolder surfaceHolder, int i, int i1, int i2) {
-                DJIVideoStreamDecoder.getInstance().changeSurface(surfaceHolder.getSurface());
-                mRTMPCamera.startPreview();
-            }
-
-            @Override
-            public void surfaceDestroyed(@NonNull SurfaceHolder surfaceHolder) {
-                DJIVideoStreamDecoder.getInstance().stop();
-                NativeHelper.getInstance().release();
-                if (mRTMPCamera.isRecording())
-                    mRTMPCamera.stopRecord();
-                if (mRTMPCamera.isStreaming())
-                    mRTMPCamera.stopStream();
-                mRTMPCamera.stopPreview();
-            }
-        });
     }
 
     private void initVirtualStickData() {
-        if (mSendVirtualStickDataTask == null)
-            mSendVirtualStickDataTask = new SendVirtualStickDataTask();
-        if (mSendVirtualStickDataTimer == null)
+        if (mSendVirtualStickDataTimer == null) {
             mSendVirtualStickDataTimer = new Timer();
 
-        mSendVirtualStickDataTimer.schedule(mSendVirtualStickDataTask, 0, SendVirtualStickDataTask.TICK_RATE);
+            if (mSendVirtualStickDataTask == null)
+                mSendVirtualStickDataTask = new SendVirtualStickDataTask();
+
+            mSendVirtualStickDataTimer.schedule(mSendVirtualStickDataTask, 0, SendVirtualStickDataTask.TICK_RATE);
+        }
     }
 
     private void unInitVirtualStickData() {
@@ -432,6 +402,21 @@ public class CameraActivity extends RosActivity implements NodeMain {
     }
 
     private void flyLeft() {
+        new Thread() {
+            @Override
+            public void run() {
+                DJISDKManager.getInstance().getLiveStreamManager().setAudioMuted(true);
+                DJISDKManager.getInstance().getLiveStreamManager().setVideoEncodingEnabled(true);
+                DJISDKManager.getInstance().getLiveStreamManager().setVideoSource(LiveStreamManager.LiveStreamVideoSource.Primary);
+                DJISDKManager.getInstance().getLiveStreamManager().registerListener((int i) -> showToast("Status changed: " + i));
+                DJISDKManager.getInstance().getLiveStreamManager().setLiveUrl(STREAM_URL);
+                int result = DJISDKManager.getInstance().getLiveStreamManager().startStream();
+                DJISDKManager.getInstance().getLiveStreamManager().setStartTime();
+                showToast("startLive:" + result +
+                        "\n isVideoStreamSpeedConfigurable:" + DJISDKManager.getInstance().getLiveStreamManager().isVideoStreamSpeedConfigurable() +
+                        "\n isLiveAudioEnabled:" + DJISDKManager.getInstance().getLiveStreamManager().isLiveAudioEnabled());
+            }
+        }.start();
         //mFlightControlData.setPitch(-0.2f); // negative pitch moves leftward
         //mFlightControlData.setRoll(0.0f); // positive roll moves forward
     }
