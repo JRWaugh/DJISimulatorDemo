@@ -30,19 +30,17 @@ working using the examples at the bottom of the page, if desired.
 
 #### If you plan to use this project with the Mavic Pro, you can skip this next step as I have included the file necessary for the Mavic Pro's camera.
 
-To use OpenVSLAM or any other computer vision with a camera, a .yaml file detailing the qualities of the camera must first be generated. Fortunately, there is software to make this easy for us. But first, note that the app is publishing **compressed** images, but the calibration software is subscribing only to **raw** images. To get around this, the camera data from the app will need to be republished as a raw image topic.
+To use OpenVSLAM or any other computer vision with a camera, a .yaml file detailing the qualities of the camera must first be generated. These details are calculated using computer vision on a checkerboard pattern to calculate how distorted a straight line appears to the camera. Follow the instructions [here](http://wiki.ros.org/camera_calibration/Tutorials/MonocularCalibration) to install the software needed, as well as to find a checkerboard pattern that you can use. The grid is printed on a very large piece of paper in the guide, but it will work the same at any size (A4, for example).
 
+Note that this software subscribes to **raw** images, but the app publishes **compressed** images. To get around this, the camera data from the app will need to be republished as a raw image topic. Obviously this will not restore the data lost from the initial compression, but that will not matter.
 ```shell
 rosrun image_transport republish compressed in:=/camera/image out:=/camera/image
 ```
-Then, in a **new terminal**:
+
+Once you have your checkerboard pattern and you are publishing raw images, open a **new terminal** and start the camera_calibration software. Replace the --square parameter with the size (in millimetres) of a square in your own checkerboard.
 ```shell
-rosdep install camera_calibration
 rosrun camera_calibration cameracalibrator.py --size 8x6 --square 0.108 image:=/camera/image camera:=/camera --no-service-check
 ```
-
-
-Obviously this will not restore the data lost from the initial compression, but that will not matter.
 
 ## Using ROS
 ### Subscribing to Images from App
