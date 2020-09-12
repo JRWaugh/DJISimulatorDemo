@@ -26,7 +26,18 @@ should be fine. Then follow the ROS Package install guide [here](https://openvsl
 working using the examples at the bottom of the page, if desired.
 
 ## Using ROS
-### ROS Joy Node
+### Subscribing to Images from App
+If roscore is not already running, open a new Terminal and enter
+```shell
+roscore
+```
+
+In a **new terminal**, open rqt_image_view
+```shell
+sudo ds4drv
+```
+
+### Publishing Joystick Data to App
 If roscore is not already running, open a new Terminal and enter
 ```shell
 roscore
