@@ -21,12 +21,21 @@ sudo apt-get install ros-kinetic-joy
 sudo pip install ds4drv
 ```
 
-### OPTIONAL: Install OpenVSLAM
+### OPTIONAL: Install OpenVSLAM and Prepare Drone Camera for Computer Vision
 Note that this installation could take some time as you will be compiling a lot of source code.
 
 Follow the Linux install instructions [here](https://openvslam.readthedocs.io/en/master/installation.html). This project used PangolinViewer, but either viewer
 should be fine. Then follow the ROS Package install guide [here](https://openvslam.readthedocs.io/en/master/ros_package.html). You can test that the package is 
 working using the examples at the bottom of the page, if desired.
+
+
+This project has only included the camera configuration file necessary for computer vision for the Mavic Pro monocular camera. If you are using a different drone with a different camera, you will need to generate your own .yaml file. Instructions to do so can be found [here](http://wiki.ros.org/camera_calibration/Tutorials/MonocularCalibration). Note that the app is publishing **compressed** images, but this software is subscribing only to **raw** images. To get around this, the camera data from the app will need to be republished in the following way:
+
+```shell
+rosrun image_transport republish compressed in:=/camera/image out:=/camera/image
+```
+
+Obviously this will not restore the data lost from the initial compression, but that will not matter.
 
 ## Using ROS
 ### Subscribing to Images from App
