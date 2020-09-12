@@ -2,7 +2,7 @@
 This project demonstrates how the Robot Operating System can be used with DJI's Mobile Software Development Kit (Android) to enhance its capabilities. This project
 was implemented using ROS Kinetic. The app is used in the following way:
 
-![No Drone Connected](/images/homescreen1.jpg) ![Drone Connected](/images/homescreen2.jpg)
+![No Drone Connected](/images/homescreen1.jpg) ![Drone Connected](/images/homescreen2.jpg) ![ROS Connect Screen](/images/rosscreen.jpg)
 
 ## Prerequisites
 ### Install Ubuntu 16.04
