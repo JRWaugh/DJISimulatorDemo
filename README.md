@@ -30,7 +30,7 @@ working using the examples at the bottom of the page, if desired.
 
 #### If you plan to use this project with the Mavic Pro, you can skip this next step as I have included the file necessary for the Mavic Pro's camera.
 
-To use OpenVSLAM or any other computer vision with a camera, a .yaml file detailing the qualities of the camera must first be generated. These details are calculated using computer vision on a checkerboard pattern to calculate how distorted a straight line appears to the camera. Follow the instructions [here](http://wiki.ros.org/camera_calibration/Tutorials/MonocularCalibration) to install the software needed, as well as to find a checkerboard pattern that you can use. The grid is printed on a very large piece of paper in the guide, but it will work the same at any size (A4, for example).
+To use OpenVSLAM or any other computer vision, a .yaml file detailing the qualities of a camera must first be generated. These details are calculated using computer vision on a checkerboard pattern to calculate how distorted a straight line appears to the camera. Follow the instructions [here](http://wiki.ros.org/camera_calibration/Tutorials/MonocularCalibration) to install the software needed, as well as to find a checkerboard pattern that you can use. The grid is printed on a very large piece of paper in the guide, but it will work the same at any size (A4, for example).
 
 Note that this software subscribes to **raw** images, but the app publishes **compressed** images. To get around this, the camera data from the app will need to be republished as a raw image topic. Obviously this will not restore the data lost from the initial compression, but that will not matter.
 ```shell
@@ -41,6 +41,8 @@ Once you have your checkerboard pattern and you are publishing raw images, open 
 ```shell
 rosrun camera_calibration cameracalibrator.py --size 8x6 --square 0.108 image:=/camera/image camera:=/camera --no-service-check
 ```
+
+Lastly, to use the .yaml file with OpenVSLAM will you need to reorganise the data according to the way [this post](https://github.com/xdspacelab/openvslam/issues/110#issuecomment-530214545) describes. It will be annoying to have to do this by hand. Sorry!
 
 ## Using ROS
 ### Subscribing to Images from App
