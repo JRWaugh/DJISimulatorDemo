@@ -1,6 +1,8 @@
 # DJI Drone with Robot Operating System Demo
 This project demonstrates how the Robot Operating System can be used with DJI's Mobile Software Development Kit (Android) to enhance its capabilities. This project
-was implemented using ROS Kinetic. The app is used in the following way:
+was implemented using ROS Kinetic, although newer versions should also work. 
+
+When the app is opened, it will wait for the phone to connect to a DJI remote controller (by USB) and for the remote controller to connect to a drone. Once everything is connected, the OPEN button will become enabled. Clicking the button will take you to the ROS connection screen where you can put the IP of the computer running roscore. If connecting via the internet, you will need to forward port 11311 to the computer running roscore.
 
 ![No Drone Connected](/images/homescreen1.jpg) ![Drone Connected](/images/homescreen2.jpg) ![ROS Connect Screen](/images/rosscreen.jpg)
 
