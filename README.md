@@ -30,7 +30,7 @@ working using the examples at the bottom of the page, if desired.
 
 ## Using ROS
 ### Subscribing to Images from App
-If roscore is not already running, open a new Terminal and enter
+If roscore is not already running, open a new terminal and enter
 ```shell
 roscore
 ```
@@ -43,8 +43,10 @@ rqt_image_view /compressed/image/compressed
 Alternatively, you can simply open rqt_image_view and select the topic from the dropdown box in the top left corner.
 ![Using rqt_image_view](/images/rqt_image_view.png) 
 
+If everything worked, you should see images coming in from the app. This will effectively be a low latency, near-30fps video feed, although uneven frame pacing might make the video seem a little stuttery.
+
 ### Publishing Joystick Data to App
-If roscore is not already running, open a new Terminal and enter
+If roscore is not already running, open a new terminal and enter
 ```shell
 roscore
 ```
