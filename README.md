@@ -28,7 +28,7 @@ Follow the Linux install instructions [here](https://openvslam.readthedocs.io/en
 should be fine. Then follow the ROS Package install guide [here](https://openvslam.readthedocs.io/en/master/ros_package.html). You can test that the package is 
 working using the examples at the bottom of the page, if desired.
 
-If you plan to use this project with the Mavic Pro, you can skip this next step as I have included the file necessary for the Mavic Pro's camera.
+#### If you plan to use this project with the Mavic Pro, you can skip this next step as I have included the file necessary for the Mavic Pro's camera.
 
 To use OpenVSLAM or any other computer vision with a camera, a .yaml file detailing the qualities of the camera must first be generated. Instructions to do so can be found [here](http://wiki.ros.org/camera_calibration/Tutorials/MonocularCalibration). Note that the app is publishing **compressed** images, but this software is subscribing only to **raw** images. To get around this, the camera data from the app will need to be republished in the following way:
 
