@@ -15,7 +15,6 @@ The ROS Wiki has a good tutorial for installing ROS Kinetic [here](http://wiki.r
 but it will be useful to install Desktop-Full if you plan to use ROS in the future.
 
 ### Install ROS Joy Node and Dualshock 4 Drivers
-NOTE: If python (2.7 or 3.3+) and pip (or pip3) are not already installed, they must be installed first
 
 ```shell
 sudo apt-get install ros-kinetic-joy
@@ -36,10 +35,13 @@ If roscore is not already running, open a new Terminal and enter
 roscore
 ```
 
-In a **new terminal**, open rqt_image_view
+In a **new terminal**, subscribe to the /camera/image/compressed ROS topic with rqt_image_view
 ```shell
-sudo ds4drv
+rqt_image_view /compressed/image/compressed
 ```
+
+Alternatively, you can simply open rqt_image_view and select the topic from the dropdown box in the top left corner.
+![Using rqt_image_view](/images/rqt_image_view.png) 
 
 ### Publishing Joystick Data to App
 If roscore is not already running, open a new Terminal and enter
