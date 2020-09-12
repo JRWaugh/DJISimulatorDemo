@@ -61,6 +61,11 @@ Alternatively, you can simply open rqt_image_view and select the topic from the 
 
 If everything worked, you should see images coming in from the app. This will effectively be a low latency, near-30fps video feed, although uneven frame pacing might make the video seem a little stuttery.
 
+**If you chose to install OpenVSLAM**, you should follow the subscriber instructions [here](https://openvslam.readthedocs.io/en/master/ros_package.html). OpenVSLAM subscribes only to raw images, so be sure to republish the images from the app with the following first:
+```shell
+rosrun image_transport republish compressed in:=/camera/image out:=/camera/image
+```
+
 ### Publishing Joystick Data to App
 If roscore is not already running, open a new terminal and enter
 ```shell
