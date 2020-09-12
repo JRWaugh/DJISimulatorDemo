@@ -71,6 +71,7 @@ In a **new terminal**, start the DS4 Driver (ds4drv) that you installed earlier
 ```shell
 sudo ds4drv
 ```
+ds4drv will now search for devices and establish connections. To create a new connection, hold the SHARE and PS buttons until the terminal says "[info][bluetooth] Found device ...".
 
 In a **new terminal**, start publishing joy data through your roscore server
 ```shell
