@@ -1,6 +1,8 @@
 # DJI Drone with Robot Operating System Demo
 This project demonstrates how the Robot Operating System can be used with DJI's Mobile Software Development Kit (Android) to enhance its capabilities. This project
-was implemented using ROS Kinetic.
+was implemented using ROS Kinetic. The app is used in the following way:
+
+![No Drone Connected](https://github.com/JRWaugh/DJISimulatorDemo/tree/master/images/homescreen1.jpeg)
 
 ## Prerequisites
 ### Install Ubuntu 16.04
