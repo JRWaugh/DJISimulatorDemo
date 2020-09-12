@@ -30,11 +30,18 @@ working using the examples at the bottom of the page, if desired.
 
 #### If you plan to use this project with the Mavic Pro, you can skip this next step as I have included the file necessary for the Mavic Pro's camera.
 
-To use OpenVSLAM or any other computer vision with a camera, a .yaml file detailing the qualities of the camera must first be generated. Instructions to do so can be found [here](http://wiki.ros.org/camera_calibration/Tutorials/MonocularCalibration). Note that the app is publishing **compressed** images, but this software is subscribing only to **raw** images. To get around this, the camera data from the app will need to be republished in the following way:
+To use OpenVSLAM or any other computer vision with a camera, a .yaml file detailing the qualities of the camera must first be generated. Fortunately, there is software to make this easy for us. But first, note that the app is publishing **compressed** images, but the calibration software is subscribing only to **raw** images. To get around this, the camera data from the app will need to be republished as a raw image topic.
 
 ```shell
 rosrun image_transport republish compressed in:=/camera/image out:=/camera/image
 ```
+Then, in a **new terminal**:
+```shell
+rosdep install camera_calibration
+rosrun camera_calibration cameracalibrator.py --size 8x6 --square 0.108 image:=/camera/image camera:=/camera --no-service-check
+```
+
+
 Obviously this will not restore the data lost from the initial compression, but that will not matter.
 
 ## Using ROS
