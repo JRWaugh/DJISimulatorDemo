@@ -1,0 +1,20 @@
+Camera.name: "narrow_stereo"
+Camera.setup: "monocular"
+Camera.model: "perspective"
+
+Camera.fx: 1017.776171
+Camera.fy: 1017.847451
+Camera.cx: 616.379704
+Camera.cy: 365.572865
+
+Camera.k1: 0.124295
+Camera.k2: -0.336433
+Camera.p1: 0.004630
+Camera.p2: -0.000116
+Camera.k3: 0.000000
+
+Camera.fps: 30.0
+Camera.cols: 1280
+Camera.rows: 720
+
+Camera.color_order: "Gray"  # please reconfigure according to your camera
