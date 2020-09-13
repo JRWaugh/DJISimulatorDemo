@@ -63,7 +63,7 @@ If everything worked, you should see images coming in from the app. This will ef
 
 **If you chose to install OpenVSLAM**, you can follow the subscriber instructions [here](https://openvslam.readthedocs.io/en/master/ros_package.html) to find how to subscribe to the images with OpenVSLAM. OpenVSLAM subscribes only to raw images, so be sure to republish the images from the app with the following first:
 ```shell
-rosrun image_transport republish compressed in:=/camera/image out:=/camera/image
+rosrun image_transport republish compressed in:=/camera/image out:=/camera/image_raw
 ```
 
 ### Publishing Joystick Data to App
