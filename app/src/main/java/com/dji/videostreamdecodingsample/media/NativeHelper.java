@@ -4,7 +4,6 @@ package com.dji.videostreamdecodingsample.media;
  *  A helper class to invoke native methods
  */
 public class NativeHelper {
-
     public static final String TAG = NativeHelper.class.getSimpleName();
 
     public interface NativeDataListener {

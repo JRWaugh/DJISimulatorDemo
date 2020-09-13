@@ -1,30 +1,18 @@
 package com.dji.videostreamdecodingsample.media;
 
 import android.content.Context;
+import android.media.Image;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
-import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 import android.util.Log;
 import android.view.Surface;
 
-
-import androidx.annotation.NonNull;
-
 import com.dji.videostreamdecodingsample.R;
 
-import net.ossrs.rtmp.ConnectCheckerRtmp;
-import net.ossrs.rtmp.SrsFlvMuxer;
-
-import dji.common.product.Model;
-import dji.log.DJILog;
-import dji.midware.data.model.P3.DataCameraGetPushStateInfo;
-import dji.sdk.codec.DJICodecManager;
-import dji.sdk.products.Aircraft;
-import dji.sdk.sdkmanager.DJISDKManager;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -32,7 +20,12 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 
+import dji.common.product.Model;
+import dji.log.DJILog;
+import dji.midware.data.model.P3.DataCameraGetPushStateInfo;
 import dji.sdk.base.BaseProduct;
+import dji.sdk.products.Aircraft;
+import dji.sdk.sdkmanager.DJISDKManager;
 
 /**
  * This class is a helper class for hardware decoding. Please follow the following steps to use it:
@@ -54,14 +47,12 @@ import dji.sdk.base.BaseProduct;
  * 6. Release the ffmpeg and the MediaCodec, stop the decoding thread.
  */
 public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
-    private static final String TAG = DJIVideoStreamDecoder.class.getSimpleName();
+    private static final String TAG = "DECODER";
     private static final int BUF_QUEUE_SIZE = 30;
     private static final int MSG_INIT_CODEC = 0;
     private static final int MSG_FRAME_QUEUE_IN = 1;
     private static final int MSG_DECODE_FRAME = 2;
-    private static final int MSG_YUV_DATA = 3;
     public static final String VIDEO_ENCODING_FORMAT = "video/avc";
-    private final HandlerThread  handlerThreadNew;
     private final Handler handlerNew;
     private final boolean DEBUG = false;
     private static DJIVideoStreamDecoder instance;
@@ -73,29 +64,16 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
     private Surface surface;
 
     public int frameIndex = -1;
-    private long currentTime;
     public int width;
     public int height;
     private boolean hasIFrameInQueue = false;
-    private SrsFlvMuxer srsFlvMuxer;
     final MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
     final LinkedList<Long> bufferChangedQueue= new LinkedList<>();
+    private FrameListener mFrameListener;
 
-    private final long createTime;
-
-    /**
-     * Set the yuv frame data receiving callback. The callback method will be invoked when the decoder
-     * output yuv frame data. What should be noted here is that the hardware decoder would not output
-     * any yuv data if a surface is configured into, which mean that if you want the yuv frames, you
-     * should set "null" surface when calling the "configure" method of MediaCodec.
-     * @param yuvDataListener
-     */
-    public void setYuvDataListener(DJICodecManager.YuvDataCallback yuvDataListener) {
-        this.yuvDataListener = yuvDataListener;
+    public void setFrameListener(FrameListener frameListener) {
+        mFrameListener = frameListener;
     }
-
-    private DJICodecManager.YuvDataCallback yuvDataListener;
-
     /**
      * A data structure for containing the frames.
      */
@@ -105,7 +83,6 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
         public final long pts;
         public final long incomingTimeMs;
         public long fedIntoCodecTime;
-        public long codecOutputTime;
         public final boolean isKeyFrame;
         public final int frameNum;
         public final long frameIndex;
@@ -124,51 +101,29 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
             this.width = width;
             this.height = height;
         }
-
-        public long getQueueDelay()
-        {
-            return fedIntoCodecTime-incomingTimeMs;
-        }
-
-        public long getDecodingDelay()
-        {
-            return codecOutputTime-fedIntoCodecTime;
-        }
-
-        public long getTotalDelay()
-        {
-            return codecOutputTime-fedIntoCodecTime;
-        }
     }
 
-    private void logd(String tag, String log) {
-        if (!DEBUG) {
-            return;
-        }
-        Log.d(tag, log);
+    public interface FrameListener {
+        void onFrameReady(Image frame);
     }
-    private void loge(String tag, String log) {
-        if (!DEBUG) {
-            return;
-        }
-        Log.e(tag, log);
+
+    private void loge(String log) {
+        if (DEBUG)
+            Log.e(TAG, log);
     }
 
     private void logd(String log) {
-        logd(TAG, log);
-    }
-    private void loge(String log) {
-        loge(TAG, log);
+        if (DEBUG)
+            Log.d(TAG, log);
     }
 
     private DJIVideoStreamDecoder() {
-        createTime = System.currentTimeMillis();
         frameQueue = new ArrayBlockingQueue<>(BUF_QUEUE_SIZE);
         startDataHandler();
-        handlerThreadNew = new HandlerThread("native parser thread");
+        HandlerThread handlerThreadNew = new HandlerThread("native parser thread");
         handlerThreadNew.start();
         handlerNew = new Handler(handlerThreadNew.getLooper(), msg -> {
-            byte[] buf = (byte[])msg.obj;
+            byte[] buf = (byte[]) msg.obj;
             NativeHelper.getInstance().parse(buf, msg.arg1);
             return false;
         });
@@ -176,9 +131,9 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
 
 
     public synchronized static DJIVideoStreamDecoder getInstance() {
-        if (instance == null) {
+        if (instance == null)
             instance = new DJIVideoStreamDecoder();
-        }
+
         return instance;
     }
 
@@ -192,45 +147,13 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
     public void init(Context context, Surface surface) {
         this.context = context;
         this.surface = surface;
-        this.srsFlvMuxer = new SrsFlvMuxer(new ConnectCheckerRtmp() {
-            @Override
-            public void onConnectionSuccessRtmp() {
-                Log.d(TAG, "Connected");
-            }
 
-            @Override
-            public void onConnectionFailedRtmp(@NonNull String reason) {
-                Log.d(TAG, "FAILED TO CONNECT");
-            }
-
-            @Override
-            public void onNewBitrateRtmp(long bitrate) {
-
-            }
-
-            @Override
-            public void onDisconnectRtmp() {
-
-            }
-
-            @Override
-            public void onAuthErrorRtmp() {
-
-            }
-
-            @Override
-            public void onAuthSuccessRtmp() {
-
-            }
-        });
-        this.srsFlvMuxer.setIsStereo(true);
-        this.srsFlvMuxer.setSampleRate(44100);
-        this.srsFlvMuxer.start("rtmp://192.168.10.38/hls/test");
         NativeHelper.getInstance().init();
         NativeHelper.getInstance().setDataListener(this);
-        if (dataHandler != null && !dataHandler.hasMessages(MSG_INIT_CODEC)) {
+        if (dataHandler != null && !dataHandler.hasMessages(MSG_INIT_CODEC))
             dataHandler.sendEmptyMessage(MSG_INIT_CODEC);
-        }
+
+        startDataHandler();
     }
 
     /**
@@ -298,7 +221,6 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
                         iframeId = R.raw.iframe_896x480;
                         break;
                     case 960:
-                        //DJILog.i(TAG, "Selected Iframe=iframe_960x720_3s");
                         //for photo mode, 960x720, GDR
                         iframeId = R.raw.iframe_960x720_3s;
                         break;
@@ -317,10 +239,7 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
             case OSMO_PLUS:
                 if (width == 960) {
                     iframeId = R.raw.iframe_960x720_osmo_gop;
-                } else if (width==1280) {
-                    //for record mode, 1280x720, GDR
-                    //DJILog.i(TAG, "Selected Iframe=iframe_1280x720_3s");
-                    //                    iframeId = R.raw.iframe_1280x720_3s;
+                } else if (width == 1280) {
                     iframeId = R.raw.iframe_1280x720_osmo_gop;
                 } else if (width == 640){
                     iframeId = R.raw.iframe_640x368_osmo_gop;
@@ -328,6 +247,7 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
                     iframeId = R.raw.iframe_1280x720_3s;
                 }
                 break;
+
             case MAVIC_PRO: //product small drone
             case MAVIC_2:
                 if (((Aircraft) DJISDKManager.getInstance().getProduct()).getMobileRemoteController() != null) {
@@ -336,32 +256,29 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
                     iframeId = -1;
                 }
                 break;
+
             case Spark:
-                switch (width) {
-                    // 与P4相同
-                    case 1024:
-                        iframeId = R.raw.iframe_1024x768_wm100;
-                        break;
-                    default:
-                        iframeId = R.raw.iframe_1280x720_p4;
-                        break;
+                if (width == 1024) {
+                    iframeId = R.raw.iframe_1024x768_wm100;
+                } else {
+                    iframeId = R.raw.iframe_1280x720_p4;
                 }
                 break;
+
             case MAVIC_AIR:
-                switch (height) {
-                    case 960:
-                        iframeId = R.raw.iframe_1280x960_wm230;
-                        break;
-                    default:
-                        iframeId = R.raw.iframe_1280x720_wm230;
-                        break;
+                if (height == 960) {
+                    iframeId = R.raw.iframe_1280x960_wm230;
+                } else {
+                    iframeId = R.raw.iframe_1280x720_wm230;
                 }
                 break;
             case PHANTOM_4:
+
                 iframeId = R.raw.iframe_1280x720_p4;
                 break;
-            case PHANTOM_4_PRO: // p4p
-            case PHANTOM_4_ADVANCED: // p4p
+
+            case PHANTOM_4_PRO:
+            case PHANTOM_4_ADVANCED:
                 switch (width) {
                     case 960:
                         iframeId = R.raw.iframe_p4p_720_4x3;
@@ -393,6 +310,7 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
                         break;
                 }
                 break;
+
             case MATRICE_600:
             case MATRICE_600_PRO: {
                 DataCameraGetPushStateInfo.CameraType cameraType = DataCameraGetPushStateInfo.getInstance().getCameraType();
@@ -423,21 +341,19 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
                 }
                 break;
             }
-            case MATRICE_100: {
-                DataCameraGetPushStateInfo.CameraType cameraType = DataCameraGetPushStateInfo.getInstance().getCameraType();
-                if (cameraType == DataCameraGetPushStateInfo.CameraType.DJICameraTypeGD600) {
 
+            case MATRICE_100:
+                if (DataCameraGetPushStateInfo.getInstance().getCameraType() == DataCameraGetPushStateInfo.CameraType.DJICameraTypeGD600) {
                     if (width == 1280 && height == 720){
                         iframeId = R.raw.iframe_gd600_1280x720;
-                    }else {
+                    } else {
                         iframeId = R.raw.iframe_1080x720_gd600;
                     }
-
                 } else {
                     iframeId = R.raw.iframe_1280x720_ins;
                 }
                 break;
-            }
+
             case MATRICE_200:
             case MATRICE_210:
             case MATRICE_210_RTK:
@@ -517,20 +433,19 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
      */
     private byte[] getDefaultKeyFrame(int width) throws IOException {
         BaseProduct product = DJISDKManager.getInstance().getProduct();
-        if (product == null || product.getModel() == null) {
-            return null;
-        }
-        int iframeId = getIframeRawId(product.getModel(), width);
 
-        if (iframeId >= 0) {
-            InputStream inputStream = context.getResources().openRawResource(iframeId);
-            int length = inputStream.available();
-            logd("iframeId length=" + length);
-            byte[] buffer = new byte[length];
-            inputStream.read(buffer);
-            inputStream.close();
-            return buffer;
+        if (product != null && product.getModel() != null) {
+            int iframeId = getIframeRawId(product.getModel(), width);
+
+            if (iframeId >= 0) {
+                InputStream inputStream = context.getResources().openRawResource(iframeId);
+                byte[] buffer = new byte[inputStream.available()];
+                inputStream.read(buffer);
+                inputStream.close();
+                return buffer;
+            }
         }
+
         return null;
     }
 
@@ -539,43 +454,34 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
      * Initialize the hardware decoder.
      */
     private void initCodec() {
-        if (width == 0 || height == 0) {
-            return;
-        }
-        if (codec != null) {
-            releaseCodec();
-        }
-        loge("initVideoDecoder----------------------------------------------------------");
-        loge("initVideoDecoder video width = " + width + "  height = " + height);
-        // create the media format
-        MediaFormat format = MediaFormat.createVideoFormat(VIDEO_ENCODING_FORMAT, width, height);
-        if (surface == null) {
-            logd("initVideoDecoder: yuv output");
-            // The surface is null, which means that the yuv data is needed, so the color format should be set to YUV420.
-            format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar);
-        } else {
-            logd("initVideoDecoder: display");
-            // The surface is set, so the color format should be set to format surface.
-            format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
-        }
-
-        try {
-            // Create the codec instance.
-            codec = MediaCodec.createDecoderByType(VIDEO_ENCODING_FORMAT);
-            logd( "initVideoDecoder create: " + (codec == null));
-            // Configure the codec.
-            // The hardware decoder will not output yuv data if a surface is set. If you want the yuv frames,
-            // set surface to null when calling the "configure" method of MediaCodec.
-            codec.configure(format, surface, null, 0);
-            logd( "initVideoDecoder configure");
-            if (codec == null) {
-                loge("Can't find video info!");
-                return;
+        if (width != 0 && height != 0) {
+            if (codec != null) {
+                releaseCodec();
             }
-            codec.start();
-        } catch (Exception e) {
-            loge("init codec failed, do it again: " + e);
-            e.printStackTrace();
+
+            MediaFormat format = MediaFormat.createVideoFormat(VIDEO_ENCODING_FORMAT, width, height);
+            if (surface == null) {
+                logd("initVideoDecoder: yuv output");
+                // The surface is null, which means that the yuv data is needed, so the color format should be set to YUV420.
+                format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
+            } else {
+                logd("initVideoDecoder: display");
+                // The surface is set, so the color format should be set to format surface.
+                format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
+            }
+
+            try {
+                // Create the codec instance.
+                codec = MediaCodec.createDecoderByType(VIDEO_ENCODING_FORMAT);
+                codec.configure(format, surface, null, 0);
+                if (codec == null)
+                    loge("Can't find video info!");
+                else
+                    codec.start();
+            } catch (Exception e) {
+                loge("init codec failed, do it again: " + e);
+                e.printStackTrace();
+            }
         }
     }
 
@@ -600,6 +506,7 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
                         removeCallbacksAndMessages(null);
                         sendEmptyMessageDelayed(MSG_DECODE_FRAME, 1);
                         break;
+
                     case MSG_FRAME_QUEUE_IN:
                         try {
                             onFrameQueueIn(msg);
@@ -608,10 +515,11 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
                             e.printStackTrace();
                         }
 
-                        if (!hasMessages(MSG_DECODE_FRAME)) {
+                        if (!hasMessages(MSG_DECODE_FRAME))
                             sendEmptyMessage(MSG_DECODE_FRAME);
-                        }
+
                         break;
+
                     case MSG_DECODE_FRAME:
                         try {
                             decodeFrame();
@@ -642,11 +550,7 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
         if (dataHandler != null) {
             dataHandler.removeCallbacksAndMessages(null);
         }
-        if (Build.VERSION.SDK_INT >= 18) {
-            dataHandlerThread.quitSafely();
-        } else {
-            dataHandlerThread.quit();
-        }
+        dataHandlerThread.quitSafely();
 
         try {
             dataHandlerThread.join(3000);
@@ -748,7 +652,6 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
         if (inputFrame.width != 0 && inputFrame.height != 0 && (inputFrame.width != this.width || inputFrame.height != this.height)) {
             this.width = inputFrame.width;
             this.height = inputFrame.height;
-            srsFlvMuxer.setVideoResolution(inputFrame.width, inputFrame.height);
             /*
              * On some devices, the codec supports changing of resolution during the fly
              * However, on some devices, that is not the case.
@@ -775,7 +678,6 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
      */
     private void decodeFrame() {
         DJIFrame inputFrame = frameQueue.poll();
-        MediaFormat format = MediaFormat.createVideoFormat(VIDEO_ENCODING_FORMAT, width, height);
 
         if (inputFrame == null)
             return;
@@ -788,7 +690,6 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
         }
 
         int inIndex = codec.dequeueInputBuffer(0);
-
         // Decode the frame using MediaCodec
         if (inIndex >= 0) {
             ByteBuffer buffer = codec.getInputBuffer(inIndex);
@@ -802,24 +703,11 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
             int outIndex = codec.dequeueOutputBuffer(bufferInfo, 0);
 
             if (outIndex >= 0) {
-                if (surface == null && yuvDataListener != null) {
-                    ByteBuffer yuvDataBuf = codec.getOutputBuffer(outIndex);
-                    yuvDataBuf.position(bufferInfo.offset);
-                    yuvDataBuf.limit(bufferInfo.size - bufferInfo.offset);
-                    if (yuvDataListener != null)
-                        yuvDataListener.onYuvDataReceived(format, yuvDataBuf, bufferInfo.size - bufferInfo.offset,  width, height);
-                } else {
-                    Log.d(TAG, "Sending frame.");
-                    if (!srsFlvMuxer.isConnected())
-                        srsFlvMuxer.start("rtmp://192.168.10.38/hls/test");
-                    ByteBuffer yuvDataBuf = codec.getOutputBuffer(outIndex);
-                    yuvDataBuf.position(bufferInfo.offset);
-                    yuvDataBuf.limit(bufferInfo.size + bufferInfo.offset);
-                    srsFlvMuxer.sendVideo(yuvDataBuf, bufferInfo);
-                }
+                if (surface == null && mFrameListener != null)
+                    mFrameListener.onFrameReady(codec.getOutputImage(outIndex));
                 codec.releaseOutputBuffer(outIndex, true);
             } else if (outIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
-                // The output buffer set is changed. So the decoder should be reinitialized and the output buffers should be retrieved.
+                // The output buffer changed, so the decoder should be reinitialized and the output buffers should be retrieved.
                 long curTime = System.currentTimeMillis();
                 bufferChangedQueue.addLast(curTime);
                 if (bufferChangedQueue.size() >= 10) {
@@ -861,10 +749,6 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
         NativeHelper.getInstance().release();
     }
 
-    public void resume() {
-        startDataHandler();
-    }
-
     @Override
     public void onDataRecv(byte[] data, int size, int frameNum, boolean isKeyFrame, int width, int height) {
         if (dataHandler == null || dataHandlerThread == null || !dataHandlerThread.isAlive()) {
@@ -872,7 +756,7 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
         }
 
         if (data.length == size) {
-            currentTime = System.currentTimeMillis();
+            long currentTime = System.currentTimeMillis();
             DJIFrame newFrame = new DJIFrame(data, size, currentTime, currentTime, isKeyFrame, frameNum, ++frameIndex, width, height);
             dataHandler.obtainMessage(MSG_FRAME_QUEUE_IN, newFrame).sendToTarget();
         }

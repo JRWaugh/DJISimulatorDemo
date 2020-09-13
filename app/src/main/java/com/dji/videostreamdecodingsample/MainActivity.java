@@ -4,10 +4,8 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
@@ -27,7 +25,6 @@ import dji.sdk.base.BaseProduct;
 import dji.sdk.sdkmanager.DJISDKInitEvent;
 import dji.sdk.sdkmanager.DJISDKManager;
 
-
 public class MainActivity extends Activity {
     private static final String TAG = MainActivity.class.getName();
     private static final String[] REQUIRED_PERMISSION_LIST = new String[] {
@@ -46,35 +43,14 @@ public class MainActivity extends Activity {
             Manifest.permission.READ_PHONE_STATE,
     };
     private static final int REQUEST_PERMISSION_CODE = 12345;
+    private BaseProduct mBaseProduct = null;
     private final List<String> missingPermission = new ArrayList<>();
-    private TextView mTextConnectionStatus;
-    private TextView mTextProduct;
-    private Button mBtnOpen;
-    private Handler mHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        mHandler = new Handler(getMainLooper());
         setContentView(R.layout.activity_main);
-        mTextConnectionStatus = findViewById(R.id.text_connection_status);
-        mTextProduct = findViewById(R.id.text_product_info);
-        mBtnOpen = findViewById(R.id.btn_open);
-        mBtnOpen.setOnClickListener(v -> startActivity(new Intent(this, CameraActivity.class)));
-        mBtnOpen.setEnabled(false);
-        ((TextView) findViewById(R.id.textView2)).setText(getResources().getString(R.string.sdk_version, DJISDKManager.getInstance().getSDKVersion()));
-    }
 
-    @Override
-    public void onResume() {
-        Log.e(TAG, "onResume");
-        super.onResume();
-
-        checkAndRequestPermissions();
-    }
-
-    private void checkAndRequestPermissions() {
         for (final String permission : REQUIRED_PERMISSION_LIST)
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED)
                 missingPermission.add(permission);
@@ -83,14 +59,17 @@ public class MainActivity extends Activity {
             startSDKRegistration();
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
             ActivityCompat.requestPermissions(this, missingPermission.toArray(new String[0]), REQUEST_PERMISSION_CODE);
+
+        initUI();
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
         // Check for granted permission and remove from missing list
         if (requestCode == REQUEST_PERMISSION_CODE)
-            for (int i = grantResults.length - 1; i >= 0; i--)
+            for (int i = grantResults.length - 1; i >= 0; --i)
                 if (grantResults[i] == PackageManager.PERMISSION_GRANTED)
                     missingPermission.remove(permissions[i]);
 
@@ -98,15 +77,16 @@ public class MainActivity extends Activity {
         if (missingPermission.isEmpty())
             startSDKRegistration();
         else
-            showToast("Missing permissions!!!");
+            showToast("Missing permissions.");
     }
 
     public void startSDKRegistration() {
         showToast("Registering, please wait...");
-        AsyncTask.execute(() -> DJISDKManager.getInstance().registerApp(getApplicationContext(), new DJISDKManager.SDKManagerCallback() {
+        DJISDKManager.getInstance().registerApp(getApplicationContext(), new DJISDKManager.SDKManagerCallback() {
             @Override
             public void onRegister(DJIError djiError) {
                 Log.d(TAG, djiError.getDescription());
+
                 if (djiError == DJISDKError.REGISTRATION_SUCCESS) {
                     showToast("Register Success");
                     DJISDKManager.getInstance().startConnectionToProduct();
@@ -116,43 +96,34 @@ public class MainActivity extends Activity {
             }
 
             @Override
-            public void onProductDisconnect() {
-                Log.d(TAG, "onProductDisconnect");
-                showToast("Product Disconnected");
-
-                mHandler.post(() -> {
-                    mTextProduct.setText(R.string.product_information);
-                    mTextConnectionStatus.setText(R.string.connection_lost);
-                    mBtnOpen.setEnabled(false);
-                });
+            public void onProductConnect(BaseProduct baseProduct) {
+                Log.d(TAG, String.format("onProductConnect: %s", baseProduct.toString()));
+                mBaseProduct = baseProduct;
+                onStatusChanged();
             }
 
             @Override
-            public void onProductConnect(BaseProduct baseProduct) {
-                Log.d(TAG, String.format("onProductConnect newProduct:%s", baseProduct));
-                showToast("Product Connected");
-
-                mHandler.post(() -> {
-                    mTextProduct.setText(baseProduct.getModel() != null ? baseProduct.getModel().getDisplayName() : getString(R.string.product_information));
-                    mTextConnectionStatus.setText(String.format("Status: %s connected", baseProduct.isConnected() ? "DJIAircraft" : "DJIHandHeld"));
-                    if (baseProduct.isConnected())
-                        mBtnOpen.setEnabled(true);
-                });
+            public void onProductDisconnect() {
+                Log.d(TAG, "onProductDisconnect");
+                mBaseProduct = null;
+                onStatusChanged();
             }
 
             @Override
             public void onProductChanged(BaseProduct baseProduct) {
-
+                Log.d(TAG, String.format("onProductChanged: %s", baseProduct.toString()));
+                mBaseProduct = baseProduct;
+                onStatusChanged();
             }
 
             @Override
             public void onComponentChange(BaseProduct.ComponentKey componentKey, BaseComponent oldComponent, BaseComponent newComponent) {
-                Log.d(TAG, String.format("onComponentChange key:%s, oldComponent:%s, newComponent:%s", componentKey, oldComponent, newComponent));
+                Log.d(TAG, String.format("onComponentChange key: %s, oldComponent:%s, newComponent: %s", componentKey, oldComponent, newComponent));
 
-                if (newComponent != null) {
-                    newComponent.setComponentListener(isConnected -> Log.d(TAG, "onComponentConnectivityChanged: " + isConnected));
-                    DJISDKManager.getInstance().startConnectionToProduct();
-                }
+                if (newComponent != null)
+                    newComponent.setComponentListener(isConnected -> onStatusChanged());
+
+                onStatusChanged();
             }
 
             @Override
@@ -160,10 +131,34 @@ public class MainActivity extends Activity {
 
             @Override
             public void onDatabaseDownloadProgress(long l, long l1) { }
-        }));
+        });
     }
 
-    public void showToast(final String msg) {
+    private void initUI() {
+        TextView mTextConnectionStatus = findViewById(R.id.text_connection_status);
+        Button mBtnOpen = findViewById(R.id.btn_open);
+        mBtnOpen.setOnClickListener(v -> startActivity(new Intent(this, CameraActivity.class)));
+        ((TextView) findViewById(R.id.text_sdk_version)).setText(getString(R.string.sdk_version, DJISDKManager.getInstance().getSDKVersion()));
+
+        if (mBaseProduct != null) {
+            if (mBaseProduct.getModel() != null) { // RC and Drone both connected
+                mBtnOpen.setEnabled(true);
+                mTextConnectionStatus.setText(getString(R.string.connection_status, mBaseProduct.getModel().getDisplayName()));
+            } else { // Only RC connected
+                mBtnOpen.setEnabled(false);
+                mTextConnectionStatus.setText(getString(R.string.connection_status, "Handheld"));
+            }
+        } else { // RC not connected and Drone unknowable
+            mBtnOpen.setEnabled(false);
+            mTextConnectionStatus.setText(getString(R.string.connection_status, "No Product"));
+        }
+    }
+
+    private void onStatusChanged() {
+        runOnUiThread(this::initUI);
+    }
+
+    private void showToast(final String msg) {
         runOnUiThread(() -> Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show());
     }
 }

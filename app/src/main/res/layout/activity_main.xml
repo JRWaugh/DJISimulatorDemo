@@ -9,26 +9,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:text="@string/status_no_product_connected"
+        android:text="@string/connection_status"
         android:textColor="@android:color/black"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:layout_alignBottom="@+id/text_product_info"
+        android:layout_alignBottom="@+id/btn_open"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="89dp" />
-
-    <TextView
-        android:id="@+id/text_product_info"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="270dp"
-        android:text="@string/product_information"
-        android:textColor="@android:color/black"
-        android:textSize="20sp"
-        android:gravity="center"
-        android:textStyle="bold"
-        />
+        android:layout_marginBottom="100dp" />
 
     <Button
         android:id="@+id/btn_open"
@@ -49,7 +36,7 @@
         android:layout_marginTop="430dp"
         android:text="@string/sdk_version"
         android:textSize="15sp"
-        android:id="@+id/textView2" />
+        android:id="@+id/text_sdk_version" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -57,9 +44,9 @@
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:text="@string/title_name"
         android:id="@+id/textView"
-        android:layout_marginTop="58dp"
+        android:layout_marginTop="100dp"
         android:textStyle="bold"
-        android:textSize="20sp"
+        android:textSize="40sp"
         android:textColor="@color/colorBlack"
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true" />
