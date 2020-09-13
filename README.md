@@ -21,18 +21,16 @@ sudo apt-get install ros-kinetic-joy
 sudo pip install ds4drv
 ```
 
-### OPTIONAL: Install OpenVSLAM and Prepare Drone Camera for Computer Vision
+### OPTIONAL: Install OpenVSLAM and Calibrate Drone Camera
 Note that this installation could take some time as you will be compiling a lot of source code.
 
-Follow the Linux install instructions [here](https://openvslam.readthedocs.io/en/master/installation.html). This project used PangolinViewer, but either viewer
-should be fine. Then follow the ROS Package install guide [here](https://openvslam.readthedocs.io/en/master/ros_package.html). You can test that the package is 
-working using the examples at the bottom of the page, if desired.
+Follow the Linux install instructions [here](https://openvslam.readthedocs.io/en/master/installation.html), and the ROS package install guide [here](https://openvslam.readthedocs.io/en/master/ros_package.html).
 
 #### If you plan to use this project with the Mavic Pro, you can skip this next step as I have included the file necessary for the Mavic Pro's camera.
 
-To use OpenVSLAM or any other computer vision, a .yaml file detailing the qualities of a camera must first be generated. These details are calculated using computer vision on a checkerboard pattern to calculate how distorted a straight line appears to the camera. Follow the instructions [here](http://wiki.ros.org/camera_calibration/Tutorials/MonocularCalibration) to install the software needed, as well as to find a checkerboard pattern that you can use. The grid is printed on a very large piece of paper in the guide, but it will work the same at any size (A4, for example).
+To use OpenVSLAM or any other computer vision, a .yaml file detailing the qualities of a camera must first be generated. Follow the instructions [here](http://wiki.ros.org/camera_calibration/Tutorials/MonocularCalibration) to install the software needed, as well as to find a checkerboard pattern that you can use. The grid is printed on a very large piece of paper in the guide, but it will work at any size (A4, for example).
 
-Note that this software subscribes to **raw** images, but the app publishes **compressed** images. To get around this, the camera data from the app will need to be republished as a raw image topic. Obviously this will not restore the data lost from the initial compression, but that will not matter.
+Note that this software subscribes to **raw** images, but the app publishes **compressed** images. To get around this, the camera data from the app will need to be republished to the raw image topic. Obviously this will not restore the data lost from the initial compression, but that will not matter.
 ```shell
 rosrun image_transport republish compressed in:=/camera/image out:=/camera/image
 ```
