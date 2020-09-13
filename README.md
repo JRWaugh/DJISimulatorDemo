@@ -43,7 +43,9 @@ rosrun camera_calibration cameracalibrator.py --size 8x6 --square 0.108 image:=/
 Lastly, to use the .yaml file with OpenVSLAM will you need to reorganise the data according to the way [this post](https://github.com/xdspacelab/openvslam/issues/110#issuecomment-530214545) describes. It will be annoying to have to do this by hand. Sorry!
 
 ## Using ROS
-### Subscribing to Images from App
+### Subscribing to Images with rqt_image_view
+Using rqt_image_view, it is possible to see the images published by the app in real time. This will effectively be a low latency, near-30fps video feed, although uneven frame pacing might make the video seem a little stuttery.
+
 If roscore is not already running, open a new terminal and enter
 ```shell
 roscore
@@ -57,9 +59,9 @@ rqt_image_view /compressed/image/compressed
 Alternatively, you can simply open rqt_image_view and select the topic from the dropdown box in the top left corner.
 ![Using rqt_image_view](/images/rqt_image_view.png) 
 
-If everything worked, you should see images coming in from the app. This will effectively be a low latency, near-30fps video feed, although uneven frame pacing might make the video seem a little stuttery.
 
-**If you chose to install OpenVSLAM**, you can follow the subscriber instructions [here](https://openvslam.readthedocs.io/en/master/ros_package.html) to find how to subscribe to the images with OpenVSLAM. OpenVSLAM subscribes only to raw images, so be sure to republish the images from the app with the following first:
+### Subscribing to Images with OpenVSLAM
+If you chose to install OpenVSLAM, you can follow the subscriber instructions [here](https://openvslam.readthedocs.io/en/master/ros_package.html) to find how to subscribe to the images with OpenVSLAM. OpenVSLAM subscribes only to raw images, so be sure to republish the images from the app with the following first:
 ```shell
 rosrun image_transport republish compressed in:=/camera/image out:=/camera/image_raw
 ```
